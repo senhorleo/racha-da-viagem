@@ -129,12 +129,9 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .toast { font-size: .85rem; color: var(--sign); min-height: 1.2em; }
 footer { font-size: .75rem; color: var(--muted); text-align: center; }
 footer a { color: inherit; }
-header.sign .autor { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 16px;
-  margin-top: 12px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / .25);
-  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
-header.sign .autor span { opacity: .85; }
-header.sign .autor b { font-family: var(--display); font-size: .95rem; letter-spacing: .05em; }
-header.sign .autor .data { margin-left: auto; opacity: .7; }
+header.sign .autor { margin-top: 10px; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
+header.sign .autor b { font-family: var(--display); font-size: .92rem; letter-spacing: .05em; }
+footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8; }
 .leaflet-container { font-family: var(--body); background: var(--input); }
 </style>
 </head>
@@ -145,10 +142,10 @@ header.sign .autor .data { margin-left: auto; opacity: .7; }
       <div>
         <h1>Racha da Viagem</h1>
         <p>Gasolina e pedágio divididos pela galera.</p>
+        <p class="autor">Feito por <b>Leonardo Márcio Senhorini Simões</b></p>
       </div>
       <button type="button" class="theme" id="themeBtn"></button>
     </div>
-    <div class="autor"><span>Feito por <b>Leonardo Márcio Senhorini Simões</b></span><span class="data">Atualizado em 18/10/2026</span></div>
   </header>
   <div class="lane" aria-hidden="true"></div>
 
@@ -212,7 +209,7 @@ header.sign .autor .data { margin-left: auto; opacity: .7; }
     </div>
   </section>
 
-  <footer>Mapa © Esri e <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · busca <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> · rotas <a href="https://project-osrm.org" target="_blank" rel="noopener">OSRM</a> · pedágios do OpenStreetMap (base de <span id="pedData"></span>)</footer>
+  <footer><p class="data">Atualizado em 18/10/2026</p>Mapa © Esri e <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · busca <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> · rotas <a href="https://project-osrm.org" target="_blank" rel="noopener">OSRM</a> · pedágios do OpenStreetMap (base de <span id="pedData"></span>)</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
