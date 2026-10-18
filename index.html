@@ -22,7 +22,7 @@
   --sign: #1f8a52; --sign-fg: #ffffff; --lane: #e8c13a; --volta: #f0a43a; --warn: #e8c13a;
   --input: #18201c; --alt: #6d7a73; color-scheme: dark }
 :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
-header.sign .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+header.sign .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .theme { font: inherit; font-size: .85rem; font-weight: 600; background: transparent; color: var(--sign-fg); border: 1px solid rgb(255 255 255 / .6);
   border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 
@@ -139,13 +139,11 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
 <div class="wrap">
   <header class="sign">
     <div class="top">
-      <div>
-        <h1>Racha da Viagem</h1>
-        <p>Gasolina e pedágio divididos pela galera.</p>
-        <p class="autor">Feito por <b>Leonardo Márcio Senhorini Simões</b></p>
-      </div>
+      <h1>Racha da Viagem</h1>
       <button type="button" class="theme" id="themeBtn"></button>
     </div>
+    <p>Gasolina e pedágio divididos pela galera.</p>
+    <p class="autor">Feito por <b>Leonardo Márcio Senhorini Simões</b></p>
   </header>
   <div class="lane" aria-hidden="true"></div>
 
@@ -396,7 +394,7 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
     const show = html => { ul.innerHTML = html; ul.hidden = false; };
     const list = arr => {
       items = arr;
-      show(items.map(p => `<li role="option"><span>${esc(p.titulo)}${p.fav ? ' <span class="tag">salvo</span>' : ''}</span>${p.resto ? `<small>${esc(p.resto)}</small>` : ''}</li>`).join(''));
+      show(items.map(p => `<li role="option"><span>${esc(p.titulo)}</span>${p.resto ? `<small>${esc(p.resto)}</small>` : ''}</li>`).join(''));
       [...ul.children].forEach((li, i) => li.addEventListener('mousedown', e => { e.preventDefault(); pick(items[i]); }));
       sel = 0; paint();
     };
