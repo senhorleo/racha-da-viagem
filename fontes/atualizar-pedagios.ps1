@@ -15,13 +15,27 @@ out center tags;
 '@
   # Servidores públicos do Overpass: se um estiver ocupado, tenta o próximo
   $servidores = 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'
+  # O curl é preferido: ele cai para IPv4 quando o IPv6 não funciona (comum nas máquinas do GitHub) e repete sozinho
+  $curl = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+  $consulta = Join-Path ([IO.Path]::GetTempPath()) 'consulta-pedagios.txt'
+  [IO.File]::WriteAllText($consulta, $q)
   $ok = $false
-  foreach ($url in $servidores) {
-    try {
-      Invoke-WebRequest -UseBasicParsing -Method Post -Uri $url -UserAgent 'RachaDaViagem/1.0 (projeto pessoal)' `
-        -ContentType 'application/x-www-form-urlencoded' -Body ('data=' + [uri]::EscapeDataString($q)) -OutFile $bruto -TimeoutSec 300
-      $ok = $true; break
-    } catch { Write-Warning "Falhou em $url : $($_.Exception.Message)" }
+  foreach ($rodada in 1..3) {
+    foreach ($url in $servidores) {
+      if ($curl) {
+        & $curl.Source -sS -f -4 --retry 2 --retry-delay 15 --max-time 300 -A 'RachaDaViagem/1.0 (projeto pessoal)' --data-urlencode "data@$consulta" -o $bruto $url
+        if ($LASTEXITCODE -eq 0) { $ok = $true } else { Write-Warning "Falhou em $url (curl $LASTEXITCODE)" }
+      } else {
+        try {
+          Invoke-WebRequest -UseBasicParsing -Method Post -Uri $url -UserAgent 'RachaDaViagem/1.0 (projeto pessoal)' `
+            -ContentType 'application/x-www-form-urlencoded' -Body ('data=' + [uri]::EscapeDataString($q)) -OutFile $bruto -TimeoutSec 300
+          $ok = $true
+        } catch { Write-Warning "Falhou em $url : $($_.Exception.Message)" }
+      }
+      if ($ok) { break }
+    }
+    if ($ok) { break }
+    Start-Sleep -Seconds 60
   }
   if (-not $ok) { throw 'Nenhum servidor do Overpass respondeu.' }
 }
