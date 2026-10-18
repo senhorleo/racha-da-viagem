@@ -62,7 +62,10 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .stop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .stop button.icon { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; font-size: 18px; }
 .stop button.icon:hover { color: var(--fg); border-color: var(--fg); }
-.addstop { align-self: flex-start; font: inherit; font-size: .88rem; font-weight: 600; color: var(--leg); background: transparent; border: 0; padding: 2px 0; cursor: pointer; }
+/* "Adicionar parada" fica sobre a linha do trajeto, entre a saída e a chegada, com um "+" no lugar do marcador */
+.addstop { position: relative; align-self: flex-start; font: inherit; font-size: .85rem; font-weight: 600; color: var(--leg); background: transparent; border: 0; padding: 2px 0; cursor: pointer; }
+.addstop::before { content: '+'; position: absolute; left: -26px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 13px; line-height: 1; background: var(--surface); border: 1.5px solid var(--leg); color: var(--leg); }
 .addstop:hover { text-decoration: underline; }
 .mapnote { font-size: .78rem; color: var(--muted); margin: -6px 0 0; }
 .leaflet-popup-content button { font: inherit; font-weight: 600; border: 0; border-radius: 6px; padding: 7px 12px; background: var(--sign); color: var(--sign-fg); cursor: pointer; }
@@ -152,8 +155,8 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
     <div class="route">
       <label class="f">Saindo de<span class="ac"><input type="text" data-f="o" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
       <div class="stops"></div>
+      <button type="button" class="addstop">Adicionar parada</button>
       <label class="f dest">Chegando em<span class="ac"><input type="text" data-f="d" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
-      <button type="button" class="addstop">+ Adicionar parada</button>
     </div>
     <div class="map"></div>
     <p class="mapnote">Toque num ponto do mapa para adicionar uma parada ali e fazer a rota passar por ele.</p>
