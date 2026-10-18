@@ -104,10 +104,14 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .result .big { font-family: var(--display); font-size: 2.8rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .result .sub { font-size: .9rem; opacity: .9; margin-top: 4px; }
 .result .rbody { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.break { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-variant-numeric: tabular-nums; }
-.break span:nth-child(even) { text-align: right; }
-.break small { color: var(--muted); }
-.break .t { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 600; }
+.break { overflow-x: auto; }
+.break table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: .92rem; }
+.break th, .break td { padding: 7px 0 7px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); vertical-align: top; }
+.break th[scope=row] { text-align: left; padding-left: 0; font-weight: 500; color: var(--muted); }
+.break thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.break td small { display: block; color: var(--muted); font-size: .78rem; }
+.break .sum { font-weight: 600; }
+.break tr.t th, .break tr.t td { border-bottom: 0; font-weight: 600; color: var(--fg); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { font: inherit; font-weight: 600; border-radius: 6px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--sign); text-decoration: none; display: inline-flex; align-items: center; }
 .btn.primary { background: var(--sign); color: var(--sign-fg); }
@@ -179,7 +183,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
 
   <section class="result" aria-live="polite">
     <div class="head">
-      <div class="lbl">Cada um paga</div>
+      <div class="lbl">Valor por pessoa</div>
       <div class="big" id="perHead">R$ 0,00</div>
       <div class="sub" id="sub"></div>
     </div>
@@ -187,7 +191,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
       <div class="break" id="break"></div>
       <div class="actions">
         <button type="button" class="btn primary" id="copyBtn">Copiar resumo</button>
-        <a class="btn ghost" id="waLink" href="#" target="_blank" rel="noopener">Mandar no WhatsApp</a>
+        <a class="btn ghost" id="waLink" href="#" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>
       </div>
       <div class="toast" id="toast"></div>
     </div>
@@ -547,30 +551,41 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     const km = num(I.km) + (on ? num(V.km) : 0);
     const total = gI + gV + ped, each = total / S.pessoas;
     const Lt = n => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' L';
+    const pessoas = `${S.pessoas} ${S.pessoas === 1 ? 'pessoa' : 'pessoas'}`;
     $('pessoas').textContent = S.pessoas;
     $('perHead').textContent = brl(each);
-    $('sub').textContent = `${S.pessoas} ${S.pessoas === 1 ? 'pessoa' : 'pessoas'} · ${fmtKm(km)}${on ? ' (ida e volta)' : ' (só ida)'}`;
-    $('break').innerHTML =
-      `<span>Gasolina na ida <small>(${Lt(lI)})</small></span><span>${brl(gI)}</span>` +
-      (on ? `<span>Gasolina na volta <small>(${Lt(lV)})</small></span><span>${brl(gV)}</span>` : '') +
-      `<span>Pedágios</span><span>${brl(ped)}</span>` +
-      `<span class="t">Total</span><span class="t">${brl(total)}</span>`;
-    const dest = I.d ? I.d.titulo || I.d.nome : I.dTxt;
+    $('sub').textContent = `Total de ${brl(total)} dividido entre ${pessoas}`;
+
+    // Tabela: uma coluna por trecho e a soma
+    const cols = [{ t: 'Ida', km: num(I.km), l: lI, g: gI, p: num(I.ped) }];
+    if (on) cols.push({ t: 'Volta', km: num(V.km), l: lV, g: gV, p: num(V.ped) }, { t: 'Total', km, l: lI + lV, g: gI + gV, p: ped, sum: true });
+    const row = (label, f, cls = '') => `<tr class="${cls}"><th scope="row">${label}</th>${cols.map(c => `<td${c.sum ? ' class="sum"' : ''}>${f(c)}</td>`).join('')}</tr>`;
+    $('break').innerHTML = `<table><thead><tr><th></th>${cols.map(c => `<th scope="col"${c.sum ? ' class="sum"' : ''}>${c.t}</th>`).join('')}</tr></thead><tbody>` +
+      row('Distância', c => fmtKm(c.km)) +
+      row('Combustível', c => `${brl(c.g)}<small>${Lt(c.l)}</small>`) +
+      row('Pedágios', c => brl(c.p)) +
+      row('Custo', c => brl(c.g + c.p), 't') + '</tbody></table>';
+
+    // Mensagem para o grupo (o WhatsApp mostra *texto* em negrito)
+    const nomeLugar = (p, txt) => (p ? p.titulo || p.nome : txt || '').split(',')[0].trim();
+    const de = nomeLugar(I.o, I.oTxt), para = nomeLugar(I.d, I.dTxt);
+    const trecho = (t, L_, g) => `${t} (${fmtKm(num(L_.km))}): combustível ${brl(g)} + pedágios ${brl(num(L_.ped))}`;
     const text = [
-      `🚗 Racha da viagem${dest ? ' para ' + dest : ''}${on ? ' (ida e volta)' : ''}`,
-      fmtKm(km),
-      `⛽ Gasolina: ${brl(gI + gV)}`,
-      `🛣️ Pedágios: ${brl(ped)}`,
-      `Total: ${brl(total)}`,
+      '*Racha da viagem*',
+      de && para ? `${de} → ${para}${on ? ', ida e volta' : ', só ida'}` : (on ? 'Ida e volta' : 'Só ida'),
       '',
-      `👉 Cada um: ${brl(each)} (${S.pessoas} pessoas)`
+      trecho('Ida', I, gI),
+      ...(on ? [trecho('Volta', V, gV)] : []),
+      '',
+      `Total: ${brl(total)}`,
+      `*Por pessoa (${pessoas}): ${brl(each)}*`
     ].join('\n');
     $('copyBtn').dataset.text = text;
     $('waLink').href = 'https://wa.me/?text=' + encodeURIComponent(text);
   }
   $('copyBtn').onclick = async () => {
     const toast = $('toast');
-    try { await navigator.clipboard.writeText($('copyBtn').dataset.text); toast.textContent = 'Copiado. É só colar no grupo.'; }
+    try { await navigator.clipboard.writeText($('copyBtn').dataset.text); toast.textContent = 'Resumo copiado.'; }
     catch (e) { toast.textContent = 'Não deu para copiar automaticamente.'; }
     setTimeout(() => toast.textContent = '', 3000);
   };
