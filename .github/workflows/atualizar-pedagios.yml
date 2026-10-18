@@ -1,0 +1,35 @@
+# Toda segunda-feira (6h de Brasília) baixa as praças de pedágio do OpenStreetMap,
+# regenera o pedagios.js e publica se algum valor ou praça mudou.
+# Também dá para rodar na hora: aba Actions > Atualizar pedágios > Run workflow.
+name: Atualizar pedágios
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gerar pedagios.js
+        shell: pwsh
+        run: ./fontes/atualizar-pedagios.ps1
+
+      - name: Publicar se mudou
+        run: |
+          # Ignora as linhas de data: só publica se praças ou valores mudaram
+          if git diff --quiet -I 'Gerado em' -I 'PEDAGIOS_DATA' -- pedagios.js; then
+            echo "Nenhuma praça ou valor mudou."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pedagios.js
+          git commit -m "Atualiza base de pedágios (OpenStreetMap)"
+          git push

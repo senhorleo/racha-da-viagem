@@ -1,5 +1,6 @@
 ﻿# Atualiza a base de pedágios do app (pedagios.js) a partir do OpenStreetMap.
 # Uso: powershell -ExecutionPolicy Bypass -File atualizar-pedagios.ps1
+# Também roda toda semana no GitHub (.github/workflows/atualizar-pedagios.yml), com PowerShell 7 no Linux.
 $ErrorActionPreference = 'Stop'
 $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path
 $bruto = Join-Path $aqui 'osm-pedagios-br.json'
@@ -12,12 +13,23 @@ area["ISO3166-1"="BR"]["admin_level"="2"]->.br;
 (node["barrier"="toll_booth"](area.br); way["barrier"="toll_booth"](area.br); node["highway"="toll_gantry"](area.br););
 out center tags;
 '@
-  Invoke-WebRequest -UseBasicParsing -Method Post -Uri 'https://overpass-api.de/api/interpreter' -UserAgent 'RachaDaViagem/1.0 (projeto pessoal)' `
-    -ContentType 'application/x-www-form-urlencoded' -Body ('data=' + [uri]::EscapeDataString($q)) -OutFile $bruto -TimeoutSec 300
+  # Servidores públicos do Overpass: se um estiver ocupado, tenta o próximo
+  $servidores = 'https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'
+  $ok = $false
+  foreach ($url in $servidores) {
+    try {
+      Invoke-WebRequest -UseBasicParsing -Method Post -Uri $url -UserAgent 'RachaDaViagem/1.0 (projeto pessoal)' `
+        -ContentType 'application/x-www-form-urlencoded' -Body ('data=' + [uri]::EscapeDataString($q)) -OutFile $bruto -TimeoutSec 300
+      $ok = $true; break
+    } catch { Write-Warning "Falhou em $url : $($_.Exception.Message)" }
+  }
+  if (-not $ok) { throw 'Nenhum servidor do Overpass respondeu.' }
 }
 
 $inv = [Globalization.CultureInfo]::InvariantCulture
 $j = Get-Content $bruto -Raw -Encoding UTF8 | ConvertFrom-Json
+# Proteção: uma resposta incompleta não pode apagar a base que já funciona
+if ($j.elements.Count -lt 800) { throw "Resposta suspeita: só $($j.elements.Count) praças." }
 $linhas = foreach ($e in $j.elements) {
   $t = $e.tags
   if ($e.type -eq 'node') { $lat = $e.lat; $lon = $e.lon } else { $lat = $e.center.lat; $lon = $e.center.lon }
@@ -35,8 +47,11 @@ $linhas = foreach ($e in $j.elements) {
   if (-not $nome) { $nome = 'Pedágio' }
   if ($t.operator -and $nome -ne $t.operator) { $nome = "$nome ($($t.operator))" }
   $tipo = if ($t.highway -eq 'toll_gantry') { 'p' } else { 'c' }
+  # O PowerShell 7 transforma datas do JSON em DateTime: volta para AAAA-MM-DD
+  $conf = $t.check_date
+  if ($conf -is [datetime]) { $conf = $conf.ToString('yyyy-MM-dd', $inv) }
   '[{0},{1},{2},[{3}],{4},"{5}","{6}"]' -f ([double]$lat).ToString('0.######', $inv), ([double]$lon).ToString('0.######', $inv), $valor, ($dirs -join ','),
-    (ConvertTo-Json ([string]$nome) -Compress), $tipo, $t.check_date
+    (ConvertTo-Json ([string]$nome) -Compress), $tipo, $conf
 }
 $data = Get-Date -Format 'yyyy-MM-dd'
 $js = "// Praças de pedágio do Brasil (OpenStreetMap, © colaboradores do OpenStreetMap, ODbL). Gerado em $data.`n" +
