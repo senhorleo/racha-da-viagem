@@ -189,7 +189,7 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
     <h2>Quantas pessoas</h2>
     <div class="stepper">
       <button type="button" id="menos" aria-label="Menos uma pessoa">−</button>
-      <output id="pessoas">4</output>
+      <output id="pessoas">1</output>
       <button type="button" id="mais" aria-label="Mais uma pessoa">+</button>
     </div>
   </section>
@@ -244,7 +244,7 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
   // o/d = { nome, lat, lon }  ·  sel = índice da rota escolhida
   // stops = paradas no meio do caminho: { p: lugar escolhido ou null, txt: o que foi digitado }
   const blank = () => ({ o: null, d: null, oTxt: '', dTxt: '', stops: [], km: 0, ped: 0, kml: 11.5, preco: 6.19, sel: 0 });
-  const S = { ida: blank(), volta: blank(), voltaOn: true, link: { rota: true, kml: true, preco: true }, pessoas: 4 };
+  const S = { ida: blank(), volta: blank(), voltaOn: true, link: { rota: true, kml: true, preco: true }, pessoas: 1 };
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) Object.assign(S, s); } catch (e) {}
   ['ida', 'volta'].forEach(k => { if (!Array.isArray(S[k].stops)) S[k].stops = []; });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -318,7 +318,7 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
   function stopsChanged(k) {
     if (k === 'volta') S.link.rota = false;
     if (k === 'ida' && S.link.rota) mirrorVolta();
-    S[k].sel = 0; route(k);
+    route(k, true);
   }
   function renderStops(k) {
     const ui = UI[k];
@@ -478,34 +478,54 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
     return { km: r.distance / 1000, seg: r.duration, line, via: viaName(r), tolls,
       ped: Math.round(tolls.reduce((a, t) => a + (t.v || 0), 0) * 100) / 100, semValor: tolls.filter(t => t.v == null).length };
   }
+  // Fração dos pontos da linha a que ficam colados (até 400 m) na linha b
+  function overlap(a, b) {
+    const pts = b.filter((_, i) => i % 4 === 0);
+    let hit = 0, N = 30;
+    for (let j = 0; j < N; j++) {
+      const [la, lo] = a[Math.floor(j * (a.length - 1) / (N - 1))], kx = Math.cos(la * RAD) * MPG;
+      if (pts.some(([y, x]) => Math.abs(y - la) < .006 && Math.hypot((y - la) * MPG, (x - lo) * kx) < 400)) hit++;
+    }
+    return hit / N;
+  }
   // Duas rotas são "a mesma" quando quase todos os pontos de uma estão colados na outra
   function sameRoute(a, b) {
     if (Math.abs(a.km - b.km) / Math.max(a.km, b.km) > .08) return false;
-    const pts = b.line.filter((_, i) => i % 4 === 0);
-    let hit = 0, N = 30;
-    for (let j = 0; j < N; j++) {
-      const [la, lo] = a.line[Math.floor(j * (a.line.length - 1) / (N - 1))], kx = Math.cos(la * RAD) * MPG;
-      if (pts.some(([y, x]) => Math.abs(y - la) < .006 && Math.hypot((y - la) * MPG, (x - lo) * kx) < 400)) hit++;
-    }
-    return hit / N > .85;
+    return overlap(a.line, b.line) > .85;
   }
-  async function route(k) {
+  // Junta os pedaços (saída → parada → … → chegada) numa rota só, no formato da OSRM
+  const joinRoutes = rs => rs.length === 1 ? rs[0] : {
+    distance: rs.reduce((a, r) => a + r.distance, 0), duration: rs.reduce((a, r) => a + r.duration, 0),
+    legs: rs.flatMap(r => r.legs),
+    geometry: { coordinates: rs.flatMap((r, i) => i ? r.geometry.coordinates.slice(1) : r.geometry.coordinates) }
+  };
+  // manter = tentar continuar na rota parecida com a que estava escolhida (ex.: ao mexer nas paradas)
+  async function route(k, manter) {
     const L_ = S[k], ui = UI[k];
     save();
     gmapsLink(k);
+    const antes = manter && routes[k][L_.sel] ? routes[k][L_.sel].line : null;
     expanded[k] = false; extraDone[k] = false; onlySel[k] = false;
     if (!L_.o || !L_.d) { routes[k] = []; drawLeg(k); return; }
     const id = ++reqId[k];
     ui.note.className = 'note'; ui.note.textContent = 'Traçando rotas…';
     ui.routes.innerHTML = ''; ui.tolls.innerHTML = '';
     try {
-      // Com paradas, a OSRM não sugere alternativas: vem uma rota passando por todas
-      const mids = L_.stops.filter(s => s.p).map(s => s.p);
-      const j = await (await fetch(osrm([L_.o, ...mids, L_.d], mids.length ? 'stops' : 'alt'))).json();
+      // Um pedido por pedaço do caminho, cada um com alternativas; as opções variam um pedaço de cada vez
+      const pts = [L_.o, ...L_.stops.filter(s => s.p).map(s => s.p), L_.d];
+      const segs = await Promise.all(pts.slice(0, -1).map((p, i) => fetch(osrm([p, pts[i + 1]], 'alt')).then(r => r.json())));
       if (id !== reqId[k]) return;
-      if (j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error(j.code);
-      routes[k] = j.routes.map(makeRoute);
+      if (segs.some(j => j.code !== 'Ok' || !j.routes || !j.routes.length)) throw new Error('rota');
+      const base = segs.map(() => 0), combos = [base];
+      segs.forEach((j, s) => j.routes.forEach((_, a) => { if (a) { const c = base.slice(); c[s] = a; combos.push(c); } }));
+      const lista = combos.map(c => makeRoute(joinRoutes(c.map((a, s) => segs[s].routes[a]))));
+      routes[k] = lista.filter((r, i) => !lista.slice(0, i).some(x => sameRoute(r, x)));
+      if (pts.length > 2) extraDone[k] = true;   // com paradas, "Ver mais rotas" só abre as opções já calculadas
       if (L_.sel >= routes[k].length) L_.sel = 0;
+      if (antes) {
+        let best = -1;
+        routes[k].forEach((r, i) => { const s = overlap(antes, r.line); if (s > best) { best = s; L_.sel = i; } });
+      }
       choose(k, L_.sel, true);
     } catch (e) {
       if (id !== reqId[k]) return;
@@ -600,7 +620,7 @@ footer .data { margin: 0 0 4px; font-size: .8rem; color: var(--fg); opacity: .8;
         <span><b>${fmtKm(r.km)}</b> · ${fmtTempo(r.seg)}${r.via ? `<br><small>pela ${esc(r.via)}${r.tolls.length ? ` · ${r.tolls.length} ${r.tolls.length === 1 ? 'pedágio' : 'pedágios'}` : ''}</small>` : ''}</span>${ped}</button>`;
     }).join('');
     [...ui.routes.children].forEach(b => b.onclick = () => choose(k, +b.dataset.i, false));
-    if (rs.length && !temParada && (!extraDone[k] || (!expanded[k] && rs.length > vis.length))) {
+    if (rs.length && (!extraDone[k] || (!expanded[k] && rs.length > vis.length))) {
       const more = document.createElement('button');
       more.type = 'button'; more.className = 'more'; more.textContent = 'Ver mais rotas';
       more.onclick = () => moreRoutes(k);
