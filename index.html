@@ -22,7 +22,7 @@
   --sign: #1f8a52; --sign-fg: #ffffff; --lane: #e8c13a; --volta: #f0a43a; --warn: #e8c13a;
   --input: #18201c; --alt: #6d7a73; color-scheme: dark }
 :root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
-header.sign { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+header.sign .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .theme { font: inherit; font-size: .85rem; font-weight: 600; background: transparent; color: var(--sign-fg); border: 1px solid rgb(255 255 255 / .6);
   border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
 
@@ -51,12 +51,21 @@ input[type=text], input[type=number] { font: inherit; font-size: 15px; color: va
 input[type=number] { font-variant-numeric: tabular-nums; }
 input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--lane); outline-offset: 1px; }
 
-.route { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 0 10px; }
-.route .dots { display: flex; flex-direction: column; align-items: center; padding-block: 30px 14px; }
-.route .dots i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--leg); background: var(--surface); }
-.route .dots i:last-child { background: var(--leg); }
-.route .dots span { flex: 1; width: 2px; background: repeating-linear-gradient(var(--muted) 0 4px, transparent 4px 8px); }
-.route .stack { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* Trajeto: linha tracejada à esquerda com um marcador por ponto (saída, paradas, chegada) */
+.route { position: relative; display: flex; flex-direction: column; gap: 8px; padding-left: 24px; min-width: 0; }
+.route::before { content: ''; position: absolute; left: 6px; top: 34px; bottom: 18px; width: 2px; background: repeating-linear-gradient(var(--muted) 0 4px, transparent 4px 8px); }
+.route label.f { position: relative; }
+.route label.f::after { content: ''; position: absolute; left: -23px; top: 30px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--leg); background: var(--surface); }
+.route label.f.dest::after { background: var(--leg); }
+.route .stop label.f::after { left: -21px; top: 33px; width: 8px; height: 8px; border: 0; background: var(--lane); border-radius: 2px; }
+.stops { display: flex; flex-direction: column; gap: 8px; }
+.stop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.stop button.icon { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; font-size: 18px; }
+.stop button.icon:hover { color: var(--fg); border-color: var(--fg); }
+.addstop { align-self: flex-start; font: inherit; font-size: .88rem; font-weight: 600; color: var(--leg); background: transparent; border: 0; padding: 2px 0; cursor: pointer; }
+.addstop:hover { text-decoration: underline; }
+.mapnote { font-size: .78rem; color: var(--muted); margin: -6px 0 0; }
+.leaflet-popup-content button { font: inherit; font-weight: 600; border: 0; border-radius: 6px; padding: 7px 12px; background: var(--sign); color: var(--sign-fg); cursor: pointer; }
 
 .ac { position: relative; display: block; }
 .ac ul { position: absolute; z-index: 1000; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 4px; list-style: none;
@@ -65,6 +74,7 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .ac li small { color: var(--muted); font-size: .8rem; font-weight: 400; }
 .ac li[aria-selected=true], .ac li:hover { background: var(--input); }
 .ac li.msg { color: var(--muted); cursor: default; font-weight: 400; }
+.ac li .tag { display: inline-block; margin-left: 6px; font-size: .65rem; padding: 0 6px; vertical-align: middle; }
 
 .map { height: 300px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; z-index: 0; }
 .routes { display: flex; flex-direction: column; gap: 6px; }
@@ -119,34 +129,39 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .toast { font-size: .85rem; color: var(--sign); min-height: 1.2em; }
 footer { font-size: .75rem; color: var(--muted); text-align: center; }
 footer a { color: inherit; }
-header.sign .autor { margin-top: 8px; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
-header.sign .autor b { font-family: var(--display); font-size: 1rem; letter-spacing: .06em; opacity: 1; }
-header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; opacity: .8; }
+header.sign .autor { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 16px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / .25);
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+header.sign .autor span { opacity: .85; }
+header.sign .autor b { font-family: var(--display); font-size: .95rem; letter-spacing: .05em; }
+header.sign .autor .data { margin-left: auto; opacity: .7; }
 .leaflet-container { font-family: var(--body); background: var(--input); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="sign">
-    <div>
-      <h1>Racha da Viagem</h1>
-      <p>Gasolina e pedágio divididos pela galera.</p>
-      <p class="autor">Feito por <b>Leonardo Márcio Senhorini Simões</b><span class="data">Atualizado em 18/10/2026</span></p>
+    <div class="top">
+      <div>
+        <h1>Racha da Viagem</h1>
+        <p>Gasolina e pedágio divididos pela galera.</p>
+      </div>
+      <button type="button" class="theme" id="themeBtn"></button>
     </div>
-    <button type="button" class="theme" id="themeBtn"></button>
+    <div class="autor"><span>Feito por <b>Leonardo Márcio Senhorini Simões</b></span><span class="data">Atualizado em 18/10/2026</span></div>
   </header>
   <div class="lane" aria-hidden="true"></div>
 
   <!-- Os dois trechos usam o mesmo molde -->
   <template id="legTpl">
     <div class="route">
-      <div class="dots" aria-hidden="true"><i></i><span></span><i></i></div>
-      <div class="stack">
-        <label class="f">Saindo de<span class="ac"><input type="text" data-f="o" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
-        <label class="f">Chegando em<span class="ac"><input type="text" data-f="d" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
-      </div>
+      <label class="f">Saindo de<span class="ac"><input type="text" data-f="o" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
+      <div class="stops"></div>
+      <label class="f dest">Chegando em<span class="ac"><input type="text" data-f="d" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
+      <button type="button" class="addstop">+ Adicionar parada</button>
     </div>
     <div class="map"></div>
+    <p class="mapnote">Toque num ponto do mapa para adicionar uma parada ali e fazer a rota passar por ele.</p>
     <div class="routes"></div>
     <p class="note" data-r="note"></p>
     <div class="tolls" data-r="tolls"></div>
@@ -229,9 +244,11 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
 
   // ---------- estado ----------
   // o/d = { nome, lat, lon }  ·  sel = índice da rota escolhida
-  const blank = () => ({ o: null, d: null, oTxt: '', dTxt: '', km: 0, ped: 0, kml: 11.5, preco: 6.19, sel: 0 });
+  // stops = paradas no meio do caminho: { p: lugar escolhido ou null, txt: o que foi digitado }
+  const blank = () => ({ o: null, d: null, oTxt: '', dTxt: '', stops: [], km: 0, ped: 0, kml: 11.5, preco: 6.19, sel: 0 });
   const S = { ida: blank(), volta: blank(), voltaOn: true, link: { rota: true, kml: true, preco: true }, pessoas: 4 };
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) Object.assign(S, s); } catch (e) {}
+  ['ida', 'volta'].forEach(k => { if (!Array.isArray(S[k].stops)) S[k].stops = []; });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
   const routes = { ida: [], volta: [] };   // rotas da OSRM (não vão para o armazenamento)
 
@@ -243,8 +260,10 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     const q = s => host.querySelector(s);
     const ui = UI[k] = {
       o: q('[data-f=o]'), d: q('[data-f=d]'), km: q('[data-f=km]'), ped: q('[data-f=ped]'), kml: q('[data-f=kml]'), preco: q('[data-f=preco]'),
-      routes: q('.routes'), note: q('[data-r=note]'), tolls: q('[data-r=tolls]'), gmaps: q('[data-r=gmaps]'), mapEl: q('.map')
+      routes: q('.routes'), note: q('[data-r=note]'), tolls: q('[data-r=tolls]'), gmaps: q('[data-r=gmaps]'), mapEl: q('.map'),
+      stops: q('.stops'), addstop: q('.addstop')
     };
+    ui.addstop.onclick = () => { S[k].stops.push({ p: null, txt: '' }); renderStops(k); const ins = ui.stops.querySelectorAll('input'); ins[ins.length - 1].focus(); };
     const color = k === 'ida' ? css('--sign') : css('--volta');
     ui.color = color;
     ui.map = L.map(ui.mapEl, { scrollWheelZoom: false }).setView([-15.8, -47.9], 4);
@@ -253,6 +272,18 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
       attribution: 'Mapa © Esri, HERE, Garmin, © OpenStreetMap'
     }).addTo(ui.map);
     ui.layer = L.layerGroup().addTo(ui.map);
+    // Tocar no mapa oferece "Adicionar parada aqui"
+    ui.map.on('click', e => {
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = 'Adicionar parada aqui';
+      const pop = L.popup().setLatLng(e.latlng).setContent(btn).openOn(ui.map);
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = 'Adicionando…';
+        const place = await reverse(e.latlng.lat, e.latlng.lng);
+        ui.map.closePopup(pop);
+        insertStop(k, place);
+      };
+    });
 
     // campos numéricos
     ['km', 'ped', 'kml', 'preco'].forEach(f => ui[f].addEventListener('input', () => {
@@ -278,9 +309,56 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
   function mirrorVolta() {
     S.volta.o = S.ida.d; S.volta.d = S.ida.o;
     S.volta.oTxt = S.ida.dTxt; S.volta.dTxt = S.ida.oTxt;
+    S.volta.stops = S.ida.stops.map(s => ({ ...s })).reverse();
     UI.volta.o.value = S.volta.oTxt || ''; UI.volta.d.value = S.volta.dTxt || '';
+    renderStops('volta');
     S.volta.sel = 0;
     if (S.voltaOn) route('volta');
+  }
+
+  // ---------- paradas ----------
+  function stopsChanged(k) {
+    if (k === 'volta') S.link.rota = false;
+    if (k === 'ida' && S.link.rota) mirrorVolta();
+    S[k].sel = 0; route(k);
+  }
+  function renderStops(k) {
+    const ui = UI[k];
+    ui.stops.innerHTML = '';
+    S[k].stops.forEach((s, i) => {
+      const row = document.createElement('div'); row.className = 'stop';
+      row.innerHTML = `<label class="f">Parada ${i + 1}<span class="ac"><input type="text" placeholder="Endereço, lugar ou cidade" autocomplete="off"></span></label>
+        <button type="button" class="icon" aria-label="Remover parada ${i + 1}">×</button>`;
+      const input = row.querySelector('input');
+      input.value = s.p ? s.p.nome : s.txt || '';
+      attachSearch(input, place => { s.p = place; s.txt = place.nome; stopsChanged(k); }, () => { s.p = null; s.txt = input.value; });
+      row.querySelector('button').onclick = () => { const had = !!s.p; S[k].stops.splice(i, 1); renderStops(k); if (had) stopsChanged(k); else save(); };
+      ui.stops.appendChild(row);
+    });
+  }
+  // Parada vinda do mapa: entra na ordem em que aparece ao longo da rota atual
+  function insertStop(k, place) {
+    const L_ = S[k], r = routes[k][L_.sel];
+    const pos = p => {
+      if (!r || !p) return Infinity;
+      let best = Infinity, bi = 0;
+      r.line.forEach(([la, lo], i) => { const d = (la - p.lat) ** 2 + ((lo - p.lon) * Math.cos(la * RAD)) ** 2; if (d < best) { best = d; bi = i; } });
+      return bi;
+    };
+    const at = pos(place);
+    let idx = L_.stops.findIndex(s => pos(s.p) > at);
+    if (idx < 0) idx = L_.stops.length;
+    L_.stops.splice(idx, 0, { p: place, txt: place.nome });
+    renderStops(k);
+    stopsChanged(k);
+  }
+  async function reverse(lat, lon) {
+    try {
+      const j = await (await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`)).json();
+      const f = (j.features || [])[0];
+      if (f) { const l = placeLabel(f); return { nome: l.titulo + (l.resto ? ', ' + l.resto : ''), titulo: l.titulo, resto: l.resto, lat, lon }; }
+    } catch (e) {}
+    return { nome: 'Ponto no mapa', titulo: 'Ponto no mapa', resto: '', lat, lon };
   }
 
   // ---------- busca de lugares (Photon / OpenStreetMap) ----------
@@ -301,6 +379,15 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
       return { nome: l.titulo + (l.resto ? ', ' + l.resto : ''), titulo: l.titulo, resto: l.resto, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], br: (f.properties || {}).countrycode === 'BR' };
     }).sort((a, b) => b.br - a.br);
   }
+  // Lugares fixos: aparecem primeiro nas sugestões (e ao tocar num campo vazio)
+  const FAVORITOS = [
+    { titulo: 'UFABC, campus São Bernardo do Campo', resto: 'Alameda da Universidade, Anchieta, São Bernardo do Campo, São Paulo', lat: -23.6785059, lon: -46.5633663 }
+  ].map(f => ({ ...f, nome: f.titulo + ', ' + f.resto, fav: true }));
+  const semAcento = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const favoritosPara = q => {
+    const w = semAcento(q).split(/\s+/).filter(Boolean);
+    return FAVORITOS.filter(f => w.every(x => semAcento(f.nome).includes(x)));
+  };
   function attachSearch(input, onPick, onType) {
     const ul = document.createElement('ul'); ul.hidden = true; ul.setAttribute('role', 'listbox');
     input.parentNode.appendChild(ul);
@@ -310,21 +397,29 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     const paint = () => [...ul.children].forEach((li, i) => li.setAttribute('aria-selected', i === sel));
     const pick = p => { input.value = p.nome; close(); onPick(p); };
     const show = html => { ul.innerHTML = html; ul.hidden = false; };
+    const list = arr => {
+      items = arr;
+      show(items.map(p => `<li role="option"><span>${esc(p.titulo)}${p.fav ? ' <span class="tag">salvo</span>' : ''}</span>${p.resto ? `<small>${esc(p.resto)}</small>` : ''}</li>`).join(''));
+      [...ul.children].forEach((li, i) => li.addEventListener('mousedown', e => { e.preventDefault(); pick(items[i]); }));
+      sel = 0; paint();
+    };
+    input.addEventListener('focus', () => { if (!input.value.trim() && FAVORITOS.length) list(FAVORITOS); });
     input.addEventListener('input', () => {
       onType();
       clearTimeout(timer); if (ctl) ctl.abort();
       const q = input.value.trim();
-      if (q.length < 3) return close();
+      const favs = q ? favoritosPara(q) : FAVORITOS;
+      if (q.length < 3) return favs.length ? list(favs) : close();
+      if (favs.length) list(favs);
       timer = setTimeout(async () => {
         ctl = new AbortController();
-        show('<li class="msg">Procurando…</li>');
+        if (!favs.length) show('<li class="msg">Procurando…</li>');
         try {
-          items = await searchPlaces(q, ctl.signal);
-          if (!items.length) return show('<li class="msg">Nada encontrado. Tente escrever de outro jeito.</li>');
-          show(items.map(p => `<li role="option">${esc(p.titulo)}${p.resto ? `<small>${esc(p.resto)}</small>` : ''}</li>`).join(''));
-          [...ul.children].forEach((li, i) => li.addEventListener('mousedown', e => { e.preventDefault(); pick(items[i]); }));
-          sel = 0; paint();
-        } catch (e) { if (e.name !== 'AbortError') show('<li class="msg">Sem conexão com a busca de lugares.</li>'); }
+          const found = await searchPlaces(q, ctl.signal);
+          const all = favs.concat(found);
+          if (!all.length) return show('<li class="msg">Nada encontrado. Tente escrever de outro jeito.</li>');
+          list(all);
+        } catch (e) { if (e.name !== 'AbortError' && !favs.length) show('<li class="msg">Sem conexão com a busca de lugares.</li>'); }
       }, 300);
     });
     input.addEventListener('keydown', e => {
@@ -374,9 +469,11 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
 
   // ---------- rotas (OSRM) ----------
   const reqId = { ida: 0, volta: 0 };
-  const expanded = { ida: false, volta: false }, extraDone = { ida: false, volta: false };
-  const osrm = (pts, alt) => `https://router.project-osrm.org/route/v1/driving/${pts.map(p => p.lon + ',' + p.lat).join(';')}?overview=full&geometries=geojson&steps=true` +
-    (alt ? '&alternatives=3' : '&continue_straight=true');
+  const expanded = { ida: false, volta: false }, extraDone = { ida: false, volta: false }, onlySel = { ida: false, volta: false };
+  // modo: 'alt' = sugerir alternativas; 'via' = desvio forçado (sem retorno); 'stops' = paradas (pode retornar no ponto,
+  // para um ponto que caiu na pista do sentido contrário não virar uma volta enorme)
+  const osrm = (pts, modo) => `https://router.project-osrm.org/route/v1/driving/${pts.map(p => p.lon + ',' + p.lat).join(';')}?overview=full&geometries=geojson&steps=true` +
+    ({ alt: '&alternatives=3', via: '&continue_straight=true', stops: '&continue_straight=false' }[modo] || '');
   function makeRoute(r) {
     const line = r.geometry.coordinates.map(([lo, la]) => [la, lo]);
     const tolls = tollsOn(line);
@@ -398,13 +495,15 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     const L_ = S[k], ui = UI[k];
     save();
     gmapsLink(k);
-    expanded[k] = false; extraDone[k] = false;
+    expanded[k] = false; extraDone[k] = false; onlySel[k] = false;
     if (!L_.o || !L_.d) { routes[k] = []; drawLeg(k); return; }
     const id = ++reqId[k];
     ui.note.className = 'note'; ui.note.textContent = 'Traçando rotas…';
     ui.routes.innerHTML = ''; ui.tolls.innerHTML = '';
     try {
-      const j = await (await fetch(osrm([L_.o, L_.d], true))).json();
+      // Com paradas, a OSRM não sugere alternativas: vem uma rota passando por todas
+      const mids = L_.stops.filter(s => s.p).map(s => s.p);
+      const j = await (await fetch(osrm([L_.o, ...mids, L_.d], mids.length ? 'stops' : 'alt'))).json();
       if (id !== reqId[k]) return;
       if (j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error(j.code);
       routes[k] = j.routes.map(makeRoute);
@@ -421,7 +520,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
   // "Ver mais rotas": força o caminho a passar por pontos dos dois lados da linha reta
   async function moreRoutes(k) {
     const L_ = S[k], ui = UI[k], id = reqId[k];
-    expanded[k] = true;
+    expanded[k] = true; onlySel[k] = false;
     if (extraDone[k]) return drawLeg(k, false);
     ui.more.disabled = true; ui.more.textContent = 'Procurando outras rotas…';
     const o = L_.o, d = L_.d, kx = Math.cos(o.lat * RAD);
@@ -432,7 +531,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     });
     const res = [];
     for (let i = 0; i < vias.length; i += 3) {   // de 3 em 3 para não sobrecarregar o servidor gratuito
-      const lote = await Promise.allSettled(vias.slice(i, i + 3).map(v => fetch(osrm([o, v, d])).then(r => r.json())));
+      const lote = await Promise.allSettled(vias.slice(i, i + 3).map(v => fetch(osrm([o, v, d], 'via')).then(r => r.json())));
       lote.forEach(x => { if (x.status === 'fulfilled' && x.value.code === 'Ok') res.push(makeRoute(x.value.routes[0])); });
     }
     if (id !== reqId[k]) return;
@@ -481,13 +580,21 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
       pts.push([p.lat, p.lon]);
       L.circleMarker([p.lat, p.lon], { radius: 7, color: ui.color, weight: 3, fillColor: fill, fillOpacity: 1 }).bindTooltip(esc(p.titulo || p.nome)).addTo(ui.layer);
     });
+    L_.stops.forEach((s, i) => {
+      if (!s.p) return;
+      pts.push([s.p.lat, s.p.lon]);
+      L.circleMarker([s.p.lat, s.p.lon], { radius: 6, color: ui.color, weight: 3, fillColor: css('--surface'), fillOpacity: 1 })
+        .bindTooltip(`Parada ${i + 1}: ${esc(s.p.titulo || s.p.nome)}`).addTo(ui.layer);
+    });
+    const temParada = L_.stops.some(s => s.p);
     if (fit !== false) {
       const all = rs.length ? rs.flatMap(r => [r.line[0], r.line[r.line.length - 1]]).concat(rs.map(r => r.line).flat()) : pts;
       if (all.length > 1) ui.map.fitBounds(L.latLngBounds(all), { padding: [24, 24] });
       else if (all.length === 1) ui.map.setView(all[0], 12);
     }
     // lista de rotas: 3 primeiro, o resto em "Ver mais rotas"
-    const vis = rs.map((r, i) => i).filter(i => expanded[k] || i < 3 || i === L_.sel);
+    // Depois de "Mostrar menos", fica só a rota escolhida
+    const vis = rs.map((r, i) => i).filter(i => expanded[k] || i === L_.sel || (!onlySel[k] && i < 3));
     ui.routes.innerHTML = vis.map(i => {
       const r = rs[i];
       const ped = r.tolls.length ? `<span class="tag toll">${brl(r.ped)}${r.semValor ? ' + ?' : ''}</span>` : '<span class="tag">sem pedágio</span>';
@@ -495,7 +602,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
         <span><b>${fmtKm(r.km)}</b> · ${fmtTempo(r.seg)}${r.via ? `<br><small>pela ${esc(r.via)}${r.tolls.length ? ` · ${r.tolls.length} ${r.tolls.length === 1 ? 'pedágio' : 'pedágios'}` : ''}</small>` : ''}</span>${ped}</button>`;
     }).join('');
     [...ui.routes.children].forEach(b => b.onclick = () => choose(k, +b.dataset.i, false));
-    if (rs.length && (!extraDone[k] || (!expanded[k] && rs.length > 3))) {
+    if (rs.length && !temParada && (!extraDone[k] || (!expanded[k] && rs.length > vis.length))) {
       const more = document.createElement('button');
       more.type = 'button'; more.className = 'more'; more.textContent = 'Ver mais rotas';
       more.onclick = () => moreRoutes(k);
@@ -504,7 +611,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     if (expanded[k] && rs.length > 3) {
       const less = document.createElement('button');
       less.type = 'button'; less.className = 'more'; less.textContent = 'Mostrar menos';
-      less.onclick = () => { expanded[k] = false; drawLeg(k, false); };
+      less.onclick = () => { expanded[k] = false; onlySel[k] = true; drawLeg(k, false); };
       ui.routes.appendChild(less);
     }
     if (extraDone[k] && expanded[k] && rs.length <= 3) {
@@ -522,13 +629,16 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
       }
       ui.note.className = sel.semValor ? 'note warn' : 'note';
       ui.note.textContent = (rs.length > 1 ? 'Toque numa rota (no mapa ou na lista) para escolher por onde vai. ' : '') +
+        (temParada ? 'A rota passa pelas paradas na ordem da lista. ' : '') +
         (sel.semValor ? `${sel.semValor} ${sel.semValor === 1 ? 'praça está' : 'praças estão'} sem valor no mapa: some no campo de pedágios.` : '');
     }
   }
   function gmapsLink(k) {
     const L_ = S[k], a = UI[k].gmaps;
     a.hidden = !(L_.o && L_.d);
-    if (L_.o && L_.d) a.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${L_.o.lat},${L_.o.lon}&destination=${L_.d.lat},${L_.d.lon}`;
+    const mids = L_.stops.filter(s => s.p).map(s => `${s.p.lat},${s.p.lon}`).join('|');
+    if (L_.o && L_.d) a.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${L_.o.lat},${L_.o.lon}&destination=${L_.d.lat},${L_.d.lon}` +
+      (mids ? '&waypoints=' + encodeURIComponent(mids) : '');
   }
 
   // ---------- volta e pessoas ----------
@@ -595,6 +705,7 @@ header.sign .autor .data { display: block; margin-top: 2px; font-size: .72rem; o
     const L_ = S[k], ui = UI[k];
     ui.o.value = L_.o ? L_.o.nome : L_.oTxt || ''; ui.d.value = L_.d ? L_.d.nome : L_.dTxt || '';
     ['km', 'ped', 'kml', 'preco'].forEach(f => ui[f].value = L_[f] || '');
+    renderStops(k);
   });
   $('volta-on').checked = S.voltaOn; $('legVolta').classList.toggle('off', !S.voltaOn);
   $('pedData').textContent = window.PEDAGIOS_DATA ? window.PEDAGIOS_DATA.split('-').reverse().join('/') : 'indisponível';
