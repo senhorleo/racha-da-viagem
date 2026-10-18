@@ -115,6 +115,8 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 .toast { font-size: .85rem; color: var(--sign); min-height: 1.2em; }
 footer { font-size: .75rem; color: var(--muted); text-align: center; }
 footer a { color: inherit; }
+footer .autor { margin: 0 0 6px; font-size: .9rem; color: var(--fg); }
+footer .autor b { font-family: var(--display); font-size: 1.05rem; letter-spacing: .03em; color: var(--sign); }
 .leaflet-container { font-family: var(--body); background: var(--input); }
 </style>
 </head>
@@ -189,7 +191,7 @@ footer a { color: inherit; }
     </div>
   </section>
 
-  <footer>Mapa © Esri e <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · busca <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> · rotas <a href="https://project-osrm.org" target="_blank" rel="noopener">OSRM</a> · pedágios do OpenStreetMap (base de <span id="pedData"></span>)</footer>
+  <footer><p class="autor">Feito por <b>Leonardo Simões</b></p>Mapa © Esri e <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · busca <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> · rotas <a href="https://project-osrm.org" target="_blank" rel="noopener">OSRM</a> · pedágios do OpenStreetMap (base de <span id="pedData"></span>)</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
